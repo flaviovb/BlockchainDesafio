@@ -132,10 +132,11 @@ func (t *BoletoPropostaChaincode) Invoke(stub shim.ChaincodeStubInterface, funct
 	// Estrutura de Seleção para escolher qual função será executada, 
 	// de acordo com a funcao chamada
 	
-
-
-
-
+	if function == "registrarProposta" {
+		fmt.Println("Firing registrarProposta")
+		//Create an asset with some value
+		return t.registrarProposta(stub, args)
+	}
 
 	fmt.Println("invoke não encontrou a func: " + function) //error
 
