@@ -27,8 +27,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"encoding/json"	
+	//"strconv"
+	//"encoding/json"	
 	"github.com/hyperledger/fabric/core/chaincode/shim"	
 )
 
@@ -65,34 +65,7 @@ func main() {
 }
 
 
-// GetTable returns the table for the specified table name or ErrTableNotFound
-// if the table does not exist.
-func (stub *ChaincodeStub) GetTable(tableName string) (*Table, error) {
-	return getTable(stub, tableName)
-}
 
-func getTable(stub ChaincodeStubInterface, tableName string) (*Table, error) {
-
-	tableName, err := getTableNameKey(tableName)
-	if err != nil {
-		return nil, err
-	}
-
-	tableBytes, err := stub.GetState(tableName)
-	if tableBytes == nil {
-		return nil, ErrTableNotFound
-	}
-	if err != nil {
-		return nil, fmt.Errorf("Error fetching table: %s", err)
-	}
-	table := &Table{}
-	err = proto.Unmarshal(tableBytes, table)
-	if err != nil {
-		return nil, fmt.Errorf("Error unmarshalling table: %s", err)
-	}
-
-	return table, nil
-}
 
 // ============================================================================================================================
 // Init
@@ -103,8 +76,8 @@ func (t *BoletoPropostaChaincode) Init(stub shim.ChaincodeStubInterface, functio
 
 	// Verificação da quantidade de argumentos recebidos
 
-	if len(args) != 2 {
-		return nil, errors.New("Please, I need 2 arguments for BoletoProposta")
+	if len(args) != 0 {
+		return nil, errors.New("Please, I need 0 arguments for BoletoProposta")
 	}
 
 
