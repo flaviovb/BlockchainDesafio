@@ -27,22 +27,21 @@ package main
 import (
 	"errors"
 	"fmt"
-
-	
+	"strconv"
+	"encoding/json"	
 	"github.com/hyperledger/fabric/core/chaincode/shim"	
 )
 
 // BoletoPropostaChaincode - implementacao do chaincode
 type BoletoPropostaChaincode struct {
+
 }
 
-
-
 // Definição da Struct Proposta e parametros para exportação para JSON
-
-
-
-
+type Boleto struct {
+    ID  int      `json:"id"`
+    Name string `json:"name"`	
+}
 
 
 
@@ -65,6 +64,36 @@ func main() {
 	}
 }
 
+
+// GetTable returns the table for the specified table name or ErrTableNotFound
+// if the table does not exist.
+func (stub *ChaincodeStub) GetTable(tableName string) (*Table, error) {
+	return getTable(stub, tableName)
+}
+
+func getTable(stub ChaincodeStubInterface, tableName string) (*Table, error) {
+
+	tableName, err := getTableNameKey(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	tableBytes, err := stub.GetState(tableName)
+	if tableBytes == nil {
+		return nil, ErrTableNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching table: %s", err)
+	}
+	table := &Table{}
+	err = proto.Unmarshal(tableBytes, table)
+	if err != nil {
+		return nil, fmt.Errorf("Error unmarshalling table: %s", err)
+	}
+
+	return table, nil
+}
+
 // ============================================================================================================================
 // Init
 // 		Inicia/Reinicia a tabela de propostas
@@ -74,12 +103,33 @@ func (t *BoletoPropostaChaincode) Init(stub shim.ChaincodeStubInterface, functio
 
 	// Verificação da quantidade de argumentos recebidos
 
-
-
+	if len(args) != 2 {
+		return nil, errors.New("Please, I need 2 arguments for BoletoProposta")
+	}
 
 
 	// Verifica se a tabela 'Proposta' existe
 	fmt.Println("Verificando se a tabela 'Proposta' existe...")
+	
+	err := stub.GetTable("BoletoPropostaAsset") 
+	
+	//tabela existe
+	if err != nil {
+	
+		//exclui tabela
+		
+		
+	}
+
+	
+	// Create ownership table
+	err := stub.CreateTable("BoletoPropostaAsset", []*shim.ColumnDefinition{
+		&shim.ColumnDefinition{Name: "ID", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "Name", Type: shim.ColumnDefinition_BYTES, Key: false},
+	})
+	if err != nil {
+		return nil, errors.New("Failed creating AssetBoleto table.")
+	}
 	
 
 
