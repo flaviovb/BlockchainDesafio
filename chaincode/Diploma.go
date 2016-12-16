@@ -132,8 +132,11 @@ func (t *DiplomaGeneralChaincode) Invoke(stub shim.ChaincodeStubInterface, funct
 
 	// Estrutura de Seleção para escolher qual função será executada,
 	// de acordo com a funcao chamada
+	if function == "init" {
+		fmt.Prinln("Firing init")
+		return t.Init(stub,"init",args)
 
-	if function == "issueDiploma" {
+	}else if function == "issueDiploma" {
 		fmt.Println("Firing issueDiploma")
 		//Create an asset with some value
 		return t.issueDiploma(stub, args)
