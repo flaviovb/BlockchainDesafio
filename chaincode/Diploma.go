@@ -27,6 +27,8 @@ import (
 
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"strconv"
+	"encoding/json"
 )
 
 // BoletoPropostaChaincode - implementacao do chaincode
@@ -157,9 +159,25 @@ func (t *DiplomaGeneralChaincode) issueDiploma(stub shim.ChaincodeStubInterface,
 	fmt.Println("issueDiploma...")
 
 	// Verifica se a quantidade de argumentos recebidas corresponde a esperada
+	if len(args) != 5 {
+		return nil, errors.New("Parameters must be 5")
+	}
 
 
+	colApproved , err := strconv.ParseBool(args[2])
 
+	_, err = stub.InsertRow(nameTableDiploma, shim.Row{
+		Columns: []*shim.Column{
+			&shim.Column{Value: &shim.Column_String_{String_: args[0]}},
+			&shim.Column{Value: &shim.Column_String_{String_: args[1]}},
+			&shim.Column{Value: &shim.Column_Bool{ Bool : colApproved }},
+			&shim.Column{Value: &shim.Column_String_{String_: args[3]}},
+			&shim.Column{Value: &shim.Column_String_{String_: args[4]}}},
+	})
+
+	if err != nil {
+		return nil, errors.New("Failed inserting row.")
+	}
 
 
 	// Obtem os valores da array de arguments (args) e
@@ -228,32 +246,53 @@ func (t *DiplomaGeneralChaincode) Query(stub shim.ChaincodeStubInterface, functi
 	fmt.Println("Query Chaincode...")
 
 	fmt.Println("query is running " + function)
+	colIdDiploma := args[0]
 
-	// Estrutura de Seleção para escolher qual função será executada,
-	// de acordo com a funcao chamada
+	row, err := t.queryDiploma(stub, colIdDiploma)
+	if err != nil {
+		return nil, err
+	}
 
+	var diplomaEntity Diploma
 
+	if len(row.Columns) > 0 {
+		diplomaEntity.ID = row.Columns[0].GetString_()
+		diplomaEntity.IDStudent = row.Columns[1].GetString_()
+		diplomaEntity.Approved = row.Columns[2].GetBool()
+		diplomaEntity.NameStudent = row.Columns[3].GetString_()
+		diplomaEntity.IDInstitution = row.Columns[4].GetString_()
 
+		fmt.Println("After QueryDiploma " + function)
 
+		//if len(row.Columns) == 0 || row.Columns[2] == nil {
+		//	return 0, errors.New("row or column value not found")
+		//}
 
+		//ret := make([]byte, 8)
+		//binary.(ret, balance)
 
-	fmt.Println("query encontrou a func: " + function)
+		return json.Marshal(diplomaEntity)
 
-	return nil, errors.New("Query de função desconhecida: " + function)
+	} else {
+		return nil, errors.New("No columns in Diploma " )
+	}
+
 }
-
 // consultarProposta: função Query para consultar uma proposta existente, recebendo os seguintes argumentos
 // args[0]: Id. Hash da proposta
-func (t *DiplomaGeneralChaincode) consultarProposta(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+func (t *DiplomaGeneralChaincode) queryDiploma(stub shim.ChaincodeStubInterface, id string) (shim.Row, error) {
 	fmt.Println("consultarProposta...")
 
 	//var resProposta Proposta		// Proposta
-	var propostaAsBytes []byte		// retorno do json em bytes
+	//var propostaAsBytes []byte		// retorno do json em bytes
 
 	// Verifica se a quantidade de argumentos recebidas corresponde a esperada
 
+	var columns []shim.Column
+	col1 := shim.Column{Value: &shim.Column_String_{String_: id}}
+	columns = append(columns, col1)
 
-
+	return stub.GetRow(nameTableDiploma, columns)
 
 
 	// Obtem os valores dos argumentos e os prepara para salvar na tabela 'Proposta'
@@ -296,5 +335,5 @@ func (t *DiplomaGeneralChaincode) consultarProposta(stub shim.ChaincodeStubInter
 
 
 	// retorna o objeto em bytes
-	return propostaAsBytes, nil
+	//return propostaAsBytes, nil
 }
