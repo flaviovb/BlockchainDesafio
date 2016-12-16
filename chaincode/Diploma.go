@@ -25,7 +25,7 @@ import (
 	"errors"
 	"fmt"
 
-	
+
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -37,30 +37,29 @@ type DiplomaGeneralChaincode struct {
 
 // Definição da Struct Proposta e parametros para exportação para JSON
 type Diploma struct {
-    ID					string	`json:"id_proposta"`
-	CpfPagador			string 	`json:"cpf_pagador"`
-	PagadorAceitou 		bool 	`json:"pagador_aceitou"`
-	BeneficiarioAceitou bool 	`json:"beneficiario_aceitou"`
-	BoletoPago 			bool 	`json:"boleto_pago"`
+	ID					string	`json:"id_diploma"`
+	IDStudent				string 	`json:"id_student"`
+	NameStudent				string 	`json:"name_student"`
+	Approved		 		bool 	`json:"approved"`
+	IDInstitution 				string 	`json:"id_institution"`
 }
 
-// consts associadas à tabela de Propostas
 const (
-	idProposta			=	"id"
-	nameTableDiploma =	"Proposta"
-	colCpfPagador			=	"cpfPagador"
-	colPagadorAceitou		=	"pagadorAceitou"
-	colBeneficiarioAceitou		=	"beneficiarioAceitou"
-	colBoletoPago			=	"boletoPago"
+	idDiploma		=	"id"
+	nameTableDiploma	=	"Diploma"
+	colIdStudent		=	"idStudent"
+	colApproved		=	"approved"
+	colNameStudent		=	"nameStudent"
+	colIDInstitution	=	"idInstitution"
 )
 
 // ============================================================================================================================
 // Main
 // ============================================================================================================================
 func main() {
-	err := shim.Start(new(BoletoPropostaChaincode))
+	err := shim.Start(new(DiplomaGeneralChaincode))
 	if err != nil {
-		fmt.Printf("Error starting BoletoPropostaChaincode chaincode: %s", err)
+		fmt.Printf("Error starting DiplomaGeneralChaincode chaincode: %s", err)
 	}
 }
 
@@ -68,7 +67,7 @@ func main() {
 // Init
 // 		Inicia/Reinicia a tabela de propostas
 // ============================================================================================================================
-func (t *BoletoPropostaChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+func (t *DiplomaGeneralChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	//myLogger.Debug("Init Chaincode...")
 	fmt.Println("Init Chaincode...")
 
@@ -84,7 +83,7 @@ func (t *BoletoPropostaChaincode) Init(stub shim.ChaincodeStubInterface, functio
 		fmt.Println("Falha ao executar stub.GetTable para a tabela " + nameTableDiploma + ". [%v]", err)
 	}
 	// Se a tabela 'Proposta' já existir, excluir a tabela
-	if tbProposta != nil {	
+	if tbProposta != nil {
 		err = stub.DeleteTable(nameTableDiploma)
 		fmt.Println("Tabela " + nameTableDiploma + " excluída.")
 	}
@@ -95,21 +94,21 @@ func (t *BoletoPropostaChaincode) Init(stub shim.ChaincodeStubInterface, functio
 
 
 	err = stub.CreateTable(nameTableDiploma, []*shim.ColumnDefinition{
-		// Identificador da proposta (hash)
-		&shim.ColumnDefinition{Name: idProposta, Type: shim.ColumnDefinition_STRING, Key: true},
-		// CPF do Pagador
-		&shim.ColumnDefinition{Name: colCpfPagador, Type: shim.ColumnDefinition_STRING, Key: false},
-		// Status de aceite do Pagador da proposta
-		&shim.ColumnDefinition{Name: colPagadorAceitou, Type: shim.ColumnDefinition_BOOL, Key: false},
-		// Status de aceite do Beneficiario da proposta
-		&shim.ColumnDefinition{Name: colBeneficiarioAceitou, Type: shim.ColumnDefinition_BOOL, Key: false},
-		// Status do Pagamento do Boleto
-		&shim.ColumnDefinition{Name: colBoletoPago, Type: shim.ColumnDefinition_BOOL, Key: false},
+		// Id Diploma (hash)
+		&shim.ColumnDefinition{Name: idDiploma, Type: shim.ColumnDefinition_STRING, Key: true},
+		// Student ID
+		&shim.ColumnDefinition{Name: colIdStudent, Type: shim.ColumnDefinition_STRING, Key: false},
+		// Flag identifying if the student was approved
+		&shim.ColumnDefinition{Name: colApproved, Type: shim.ColumnDefinition_BOOL, Key: false},
+		// Student name
+		&shim.ColumnDefinition{Name: colNameStudent, Type: shim.ColumnDefinition_STRING, Key: false},
+		// Institution ID
+		&shim.ColumnDefinition{Name: colIDInstitution, Type: shim.ColumnDefinition_STRING, Key: false},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Falha ao criar a tabela " + nameTableDiploma + ". [%v]", err)
-	} 
-	fmt.Println("Tabela " + nameTableDiploma + " criada com sucesso.")
+	}
+	fmt.Println("Table " + nameTableDiploma + " was created.")
 
 	fmt.Println("Init Chaincode... Finalizado!")
 
@@ -125,19 +124,19 @@ func (t *BoletoPropostaChaincode) Init(stub shim.ChaincodeStubInterface, functio
 // Invoke - Ponto de entrada para chamadas do tipo Invoke.
 // Funções suportadas:
 // "init": inicializa o estado do chaincode, também utilizado como reset
-// "registrarProposta(Id, cpfPagador, pagadorAceitou, beneficiarioAceitou, 
+// "registrarProposta(Id, cpfPagador, pagadorAceitou, beneficiarioAceitou,
 // boletoPago)": para registrar uma nova proposta ou atualizar uma já existente.
-func (t *BoletoPropostaChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+func (t *DiplomaGeneralChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("Invoke Chaincode...")
 	fmt.Println("invoke is running " + function)
 
-	// Estrutura de Seleção para escolher qual função será executada, 
+	// Estrutura de Seleção para escolher qual função será executada,
 	// de acordo com a funcao chamada
-	
-	if function == "registrarProposta" {
-		fmt.Println("Firing registrarProposta")
+
+	if function == "issueDiploma" {
+		fmt.Println("Firing issueDiploma")
 		//Create an asset with some value
-		return t.registrarProposta(stub, args)
+		return t.issueDiploma(stub, args)
 	}
 
 	fmt.Println("invoke não encontrou a func: " + function) //error
@@ -151,8 +150,8 @@ func (t *BoletoPropostaChaincode) Invoke(stub shim.ChaincodeStubInterface, funct
 // args[2]: pagadorAceitou. Status de aceite do Pagador da proposta
 // args[3]: beneficiarioAceitou. Status de aceite do Beneficiario da proposta
 // args[4]: boletoPago. Status do Pagamento do Boleto
-func (t *BoletoPropostaChaincode) registrarProposta(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	fmt.Println("registrarProposta...")
+func (t *DiplomaGeneralChaincode) issueDiploma(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	fmt.Println("issueDiploma...")
 
 	// Verifica se a quantidade de argumentos recebidas corresponde a esperada
 
@@ -160,7 +159,7 @@ func (t *BoletoPropostaChaincode) registrarProposta(stub shim.ChaincodeStubInter
 
 
 
-	// Obtem os valores da array de arguments (args) e 
+	// Obtem os valores da array de arguments (args) e
 	// os converte no tipo necessário para salvar na tabela 'Proposta'
 
 
@@ -177,7 +176,7 @@ func (t *BoletoPropostaChaincode) registrarProposta(stub shim.ChaincodeStubInter
 
 
 	// Registra a proposta na tabela 'Proposta'
-	
+
 
 
 
@@ -195,19 +194,19 @@ func (t *BoletoPropostaChaincode) registrarProposta(stub shim.ChaincodeStubInter
 
 
 	// Caso a proposta já exista
-	
-		// Trecho para atualizar uma proposta existente
-		// substitui um registro existente em uma linha com o registro associado ao idProposta recebido nos argumentos
 
-		
+	// Trecho para atualizar uma proposta existente
+	// substitui um registro existente em uma linha com o registro associado ao idProposta recebido nos argumentos
 
 
 
 
-		
 
 
-	fmt.Println("Proposta criada!")
+
+
+
+	fmt.Println("Diploma created")
 
 	return nil, nil
 }
@@ -222,12 +221,12 @@ func (t *BoletoPropostaChaincode) registrarProposta(stub shim.ChaincodeStubInter
 // Query - Ponto de entrada para chamadas do tipo Query.
 // Funções suportadas:
 // "consultarProposta(Id)": para consultar uma proposta existente
-func (t *BoletoPropostaChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+func (t *DiplomaGeneralChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("Query Chaincode...")
 
 	fmt.Println("query is running " + function)
 
-	// Estrutura de Seleção para escolher qual função será executada, 
+	// Estrutura de Seleção para escolher qual função será executada,
 	// de acordo com a funcao chamada
 
 
@@ -235,19 +234,19 @@ func (t *BoletoPropostaChaincode) Query(stub shim.ChaincodeStubInterface, functi
 
 
 
-	fmt.Println("query encontrou a func: " + function) 
+	fmt.Println("query encontrou a func: " + function)
 
 	return nil, errors.New("Query de função desconhecida: " + function)
 }
 
 // consultarProposta: função Query para consultar uma proposta existente, recebendo os seguintes argumentos
 // args[0]: Id. Hash da proposta
-func (t *BoletoPropostaChaincode) consultarProposta(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+func (t *DiplomaGeneralChaincode) consultarProposta(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	fmt.Println("consultarProposta...")
-	
+
 	//var resProposta Proposta		// Proposta
 	var propostaAsBytes []byte		// retorno do json em bytes
-	
+
 	// Verifica se a quantidade de argumentos recebidas corresponde a esperada
 
 
@@ -255,40 +254,40 @@ func (t *BoletoPropostaChaincode) consultarProposta(stub shim.ChaincodeStubInter
 
 
 	// Obtem os valores dos argumentos e os prepara para salvar na tabela 'Proposta'
-	
+
 
 
 
 	// Define o valor de coluna do registro a ser buscado
-	
+
 
 
 
 	// Consultar a proposta na tabela 'Proposta'
-	
+
 
 
 
 
 	// Tratamento para o caso de não encontrar nenhuma proposta correspondente
-	
-
-
-
-
-
-	// Criação do objeto Proposta	
-	
 
 
 
 
 
 
-	
+	// Criação do objeto Proposta
+
+
+
+
+
+
+
+
 
 	// Converter o objeto da Proposta para Bytes, para retorná-lo em formato JSON
-	
+
 
 
 
